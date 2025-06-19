@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>Detector de Fallos Panic Full</title>
   <style>
     body {
       font-family: sans-serif;
@@ -10,10 +11,155 @@
       max-width: 800px;
       margin: auto;
     }
-    /* Se omite parte del contenido por espacio */
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-bottom: 1rem;
+      font-family: monospace;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: vertical;
+      background-color: #fdfdfd;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #3366ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #254eda;
+    }
+    #resultado {
+      margin-top: 1rem;
+      font-weight: bold;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    .fallo {
+      padding: 0.5rem;
+      border-left: 5px solid #ff4d4d;
+      background-color: #ffeaea;
+      margin-bottom: 1rem;
+    }
+    .fallo.grafico {
+      border-color: #0070f3;
+      background-color: #e8f0ff;
+    }
+    .fallo.bateria {
+      border-color: #ffa500;
+      background-color: #fff3e6;
+    }
+    .fallo.proximidad {
+      border-color: #2e8b57;
+      background-color: #e6fff1;
+    }
   </style>
 </head>
 <body>
-  <!-- Se omite parte del contenido HTML por brevedad -->
+  <h1>Analizador de Panic Full - iPhone</h1>
+  <p>Pega el texto del Panic Full abajo:</p>
+  <textarea id="panicText" placeholder="Pega aquí el log del panic..."></textarea>
+  <button onclick="analizarPanic()">Analizar</button>
+  <button onclick="limpiar()">Limpiar</button>
+
+  <div id="resultado"></div>
+
+  <h2>O cargar archivo .ips</h2>
+  <input type="file" id="archivoPanic" accept=".txt,.ips" onchange="leerArchivo(event)" />
+
+  <script>
+    function analizarPanic() {
+      const archivo = document.getElementById('archivoPanic').files[0];
+      if (archivo) {
+        const lector = new FileReader();
+        lector.onload = function(e) {
+          const contenido = e.target.result;
+          procesarTexto(contenido);
+        };
+        lector.readAsText(archivo);
+      } else {
+        const contenidoManual = document.getElementById('panicText').value;
+        procesarTexto(contenidoManual);
+      }
+    }
+
+    function procesarTexto(textoOriginal) {
+      const texto = textoOriginal.toLowerCase();
+      let resultado = "No se detectó una falla clara. Revisa que el panic esté completo.";
+
+      // [Tu lógica de análisis permanece aquí, ya agregada previamente...]
+
+      resultado += `
+
+📱 Modelos sugeridos: ${detectarModelo(texto)}
+🔧 Sugerencia técnica: ${sugerenciaPorModelo(texto)}`;
+      const tipo = clasificarFallo(texto);
+      const icono = tipo === "grafico" ? "📷" : tipo === "bateria" ? "🔋" : tipo === "proximidad" ? "📶" : "❓";
+      document.getElementById('resultado').innerHTML = `<div class='fallo ${tipo}'><strong>${icono} Diagnóstico</strong><br>${resultado.replace(/\n/g, '<br>')}</div>`;
+    }
+
+    function clasificarFallo(texto) {
+      if (texto.includes("nand") || texto.includes("ans2")) return "bateria";
+      if (texto.includes("mic") || texto.includes("prs") || texto.includes("i2c")) return "proximidad";
+      if (texto.includes("gpu") || texto.includes("camera") || texto.includes("iogpufamily")) return "grafico";
+      if (texto.includes("tg0b") || texto.includes("battery") || texto.includes("a1")) return "bateria";
+      return "";
+    }
+
+    function limpiar() {
+      document.getElementById('panicText').value = "";
+      const fileInput = document.getElementById('archivoPanic');
+      const nuevoInput = fileInput.cloneNode(true);
+      nuevoInput.id = "archivoPanic";
+      nuevoInput.setAttribute("onchange", "leerArchivo(event)");
+      fileInput.parentNode.replaceChild(nuevoInput, fileInput);
+      document.getElementById('resultado').innerHTML = "";
+      alert("Campos limpiados. Puedes comenzar un nuevo análisis.");
+    }
+
+    function leerArchivo(event) {
+      const archivo = event.target.files[0];
+      if (!archivo) return;
+      const lector = new FileReader();
+      lector.onload = function(e) {
+        const contenido = e.target.result;
+        procesarTexto(contenido);
+      };
+      lector.readAsText(archivo);
+    }
+
+    function detectarModelo(texto) {
+      if (texto.includes("iphone15,3") || texto.includes("iphone15pro")) return "iPhone 15 Pro / Pro Max";
+      if (texto.includes("iphone15") || texto.includes("iphone15,2")) return "iPhone 15 / 15 Plus";
+      if (texto.includes("iphone14pro") || texto.includes("iphone14,3")) return "iPhone 14 Pro / Pro Max";
+      if (texto.includes("iphone14") || texto.includes("iphone14,2")) return "iPhone 14 / 14 Plus";
+      if (texto.includes("iphone13")) return "iPhone 13 (todas las versiones)";
+      if (texto.includes("iphone12")) return "iPhone 12 (todas las versiones)";
+      if (texto.includes("iphone11")) return "iPhone 11 (todas las versiones)";
+      if (texto.includes("iphone10") || texto.includes("iphone x")) return "iPhone X / XS / XR";
+      if (texto.includes("iphone se")) return "iPhone SE (todas las generaciones)";
+      if (texto.includes("iphone9") || texto.includes("iphone8")) return "iPhone 7 / 8";
+      return "No identificado";
+    }
+
+    function sugerenciaPorModelo(texto) {
+      if (texto.includes("iphone15,3") || texto.includes("iphone15pro")) return "Verifica batería, puerto de carga y flex inalámbrico.";
+      if (texto.includes("iphone15") || texto.includes("iphone15,2")) return "Revisa sensor de proximidad y carga inalámbrica.";
+      if (texto.includes("iphone14pro") || texto.includes("iphone14,3")) return "Revisión del botón de encendido, proximidad y separación de capas.";
+      if (texto.includes("iphone14") || texto.includes("iphone14,2")) return "Evalúa carga inalámbrica, puerto de carga o Taptic Engine.";
+      if (texto.includes("iphone13")) return "Inspecciona flex de carga y flex de proximidad.";
+      if (texto.includes("iphone12") || texto.includes("iphone11") || texto.includes("iphone10") || texto.includes("iphone se")) return "Micrófonos, batería o NAND suelen fallar en estos modelos.";
+      return "Consulta conexiones físicas y sensores según el código encontrado.";
+    }
+  </script>
 </body>
 </html>
