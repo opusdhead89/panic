@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Analizador de Panic MacPartsRepair</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -63,9 +63,9 @@
 </head>
 <body>
   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/60px-Apple_logo_black.svg.png" alt="Logo" style="vertical-align:middle;margin-right:10px;height:40px;">
-<span style="font-size:1.8em;font-weight:bold;vertical-align:middle;">Analizador de Panic MacPartsRepair</span>
+  <span style="font-size:1.8em;font-weight:bold;vertical-align:middle;">Analizador de Panic MacPartsRepair</span>
   <p>Pega el texto del Panic Full abajo:</p>
-  <textarea id="panicText" placeholder="Pega aquí el log del panic..."></textarea>
+  <textarea id="panicText" placeholder="Pega aquí el log del panic..." oninput="document.getElementById('btnAnalizar').disabled = this.value.trim() === ''"></textarea>
   <button id="btnAnalizar" onclick="analizarPanic()" disabled>Analizar</button>
   <button onclick="limpiar()">Limpiar</button>
   <div id="resultado"></div>
@@ -89,6 +89,22 @@
   <p id="mensajeOCR" style="display:none;font-weight:bold;margin-top:1rem;">Reconociendo texto...</p>
   <div id="progresoOCR"><div></div></div>
   <script>
+    function leerArchivo(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('panicText').value = e.target.result;
+        document.getElementById('btnAnalizar').disabled = false;
+      };
+      reader.readAsText(file);
+    }
+
+    function analizarPanic() {
+      const texto = document.getElementById("panicText").value;
+      procesarTexto(texto);
+    }
+
     function procesarTexto(textoOriginal) {
       const texto = textoOriginal.toLowerCase();
       let modelo = "Modelo no identificado";
@@ -102,21 +118,45 @@
       else if (texto.includes("mic2")) resultado += `🎤 Fallo: mic2 detectado.\n👉 Revisa el flex del botón de encendido.`;
       else if (texto.includes("prs0")) resultado += `🧪 Fallo: prs0 detectado.\n👉 Revisa el flex del puerto de carga.`;
       else if (texto.includes("nand") || texto.includes("ans2")) resultado += `💾 Fallo: Problema con la memoria NAND.\n👉 El almacenamiento puede estar dañado o tener un fallo lógico.`;
-      else if (texto.includes("0x800")) resultado += `🔌 Fallo: 0x800 detectado.\n👉 Revisa el flex del puerto de carga.`;
-      else if (texto.includes("0x1000")) resultado += `👃 Fallo: 0x1000 detectado.\n👉 Revisa el flex del sensor de proximidad.`;
-      else if (texto.includes("0x1800")) resultado += `📦 Fallo: 0x1800 detectado.\n👉 Revisa tanto el flex del puerto de carga como el del sensor de proximidad.`;
-      else if (texto.includes("0x400")) resultado += `🧩 Fallo: 0x400 detectado.\n👉 Posible separación entre capas (sandwich separation).`;
-      else if (texto.includes("0x400000")) resultado += `📡 Fallo: 0x400000 detectado.\n👉 Revisa el flex de carga inalámbrica (vidrio trasero).`;
-      else if (texto.includes("0x100000")) resultado += `🔌 Fallo: 0x100000 detectado.\n👉 Revisa el flex del puerto de carga.`;
-      else if (texto.includes("0x500000")) resultado += `📳 Fallo: 0x500000 detectado.\n👉 Revisa el taptic engine, el puerto de carga o comunicación con la batería.`;
-      else if (texto.includes("0x200000")) resultado += `👃 Fallo: 0x200000 detectado.\n👉 Revisa el flex del sensor de proximidad o carga inalámbrica en modelos recientes.`;
-      else if (texto.includes("0xa1")) resultado += `🔋 Fallo: 0xa1 detectado.\n👉 Revisa la batería en modelos iPhone 15 Pro o Pro Max.`;
-      else if (texto.includes("0x300000")) resultado += `🔌 Fallo: 0x300000 detectado.\n👉 Revisa el flex del puerto de carga.`;
-      else if (texto.includes("0x700000")) resultado += `🔄 Fallo: 0x700000 detectado.\n👉 Revisa tanto el flex del puerto de carga como el de carga inalámbrica.`;
       else if (texto.includes("tgob") || texto.includes("tg0b")) resultado += `🌡️ Fallo: TGOB no detectado.\n👉 Revisa la batería o el sensor de temperatura (termistor). Puede ser una batería genérica, el conector suelto o daño en la línea de comunicación.`;
       else if (texto.includes("thermalmonitord") || texto.includes("watchdog timeout")) resultado += `🧭 Fallo: Watchdog o Thermalmonitord.\n👉 El sistema no recibe respuesta del monitoreo térmico. Puede ser batería en mal estado o falla de línea de control en circuito de carga.`;
-      else resultado += "No se detectó una falla clara. Revisa que el panic esté completo.";
+      else resultado += "⚠️ No se detectó una falla clara. Revisa que el panic esté completo.";
       document.getElementById('resultado').innerText = resultado;
+    }
+
+    function limpiar() {
+      document.getElementById("panicText").value = "";
+      document.getElementById("resultado").innerText = "";
+      document.getElementById('btnAnalizar').disabled = true;
+    }
+
+    function copiarResultado() {
+      const resultado = document.getElementById("resultado").innerText;
+      navigator.clipboard.writeText(resultado);
+    }
+
+    function leerImagen(event) {
+      const archivo = event.target.files[0];
+      if (!archivo) return;
+      document.getElementById("mensajeOCR").style.display = "block";
+      document.getElementById("progresoOCR").style.display = "block";
+      const contenedorProgreso = document.querySelector("#progresoOCR > div");
+      Tesseract.recognize(archivo, 'eng', {
+        logger: e => {
+          if (e.status === "recognizing text") {
+            contenedorProgreso.style.width = Math.round(e.progress * 100) + "%";
+          }
+        }
+      }).then(({ data: { text } }) => {
+        document.getElementById("mensajeOCR").style.display = "none";
+        document.getElementById("progresoOCR").style.display = "none";
+        if (text.trim().length < 5) {
+          alert("No se pudo reconocer texto válido en la imagen. Intenta con otra imagen o mejora la calidad.");
+        } else {
+          document.getElementById("panicText").value = text;
+          document.getElementById("btnAnalizar").disabled = false;
+        }
+      });
     }
   </script>
   <footer style="margin-top:2rem;text-align:center;font-size:0.9em;color:#555;">
