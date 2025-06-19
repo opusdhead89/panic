@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f4ff;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-bottom: 1rem;
+      font-family: monospace;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: vertical;
+      background-color: #fdfdfd;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #3366ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #254eda;
+    }
+    #resultado {
+      margin-top: 1rem;
+      font-weight: bold;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    .fallo {
+      padding: 0.5rem;
+      border-left: 5px solid #ff4d4d;
+      background-color: #ffeaea;
+      margin-bottom: 1rem;
+    }
+    .fallo.grafico {
+      border-color: #0070f3;
+      background-color: #e8f0ff;
+    }
+    .fallo.bateria {
+      border-color: #ffa500;
+      background-color: #fff3e6;
+    }
+    .fallo.proximidad {
+      border-color: #2e8b57;
+      background-color: #e6fff1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Analizador de Panic Full - iPhone</h1>
+  <p>Pega el texto del Panic Full abajo:</p>
+  <textarea id="panicText" placeholder="Pega aquí el log del panic..."></textarea>
+  <button onclick="analizarPanic()">Analizar</button>
+  <button onclick="limpiar()">Limpiar</button>
+
+  <div id="resultado"></div>
+
+  <h2>O cargar archivo .ips</h2>
+  <h2>O subir una imagen del panic</h2>
+  <input type="file" accept="image/*" onchange="leerImagen(event)" />
+  <input type="file" id="archivoPanic" accept=".txt,.ips" onchange="leerArchivo(event)" />
+
+  <script>
+window.addEventListener('DOMContentLoaded', function () {
+  window.analizarPanic = function() {
+    const archivo = document.getElementById('archivoPanic').files[0];
+    if (archivo) {
+      const lector = new FileReader();
+      lector.onload = function(e) {
+        const contenido = e.target.result;
+        procesarTexto(contenido);
+      };
+      lector.readAsText(archivo);
+    } else {
+      const contenidoManual = document.getElementById('panicText').value;
+      procesarTexto(contenidoManual);
+    }
+  };
+
+  window.limpiar = function () {
+    document.getElementById('panicText').value = "";
+    const fileInput = document.getElementById('archivoPanic');
+    const nuevoInput = fileInput.cloneNode(true);
+    nuevoInput.id = "archivoPanic";
+    nuevoInput.setAttribute("onchange", "leerArchivo(event)");
+    fileInput.parentNode.replaceChild(nuevoInput, fileInput);
+    document.getElementById('resultado').innerHTML = "";
+    alert("Campos limpiados. Puedes comenzar un nuevo análisis.");
+  };
+
+  window.leerArchivo = function (event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = function(e) {
+      procesarTexto(e.target.result);
+    };
+    lector.readAsText(archivo);
+  };
+
+  window.leerImagen = function (event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = function(e) {
+      Tesseract.recognize(
+        e.target.result,
+        'eng',
+        { logger: m => console.log(m) }
+      ).then(({ data: { text } }) => {
+        alert("Texto reconocido automáticamente desde la imagen. Se iniciará el análisis.");
+        procesarTexto(text);
+      }).catch(err => {
+        alert("Error al procesar imagen con OCR: " + err);
+      });
+    };
+    lector.readAsDataURL(archivo);
+  };
+
+  function procesarTexto(textoOriginal) {
+    const texto = textoOriginal.toLowerCase();
+    let resultado = "No se detectó una falla clara. Revisa que el panic esté completo.";
+    if (texto.includes("mic1")) resultado = `🎤 Fallo: mic1 detectado.\n👉 Revisa el flex del puerto de carga. En iPhone SE 2020 también podría ser una falla de placa.`;
+    else if (texto.includes("mic2")) resultado = `🎤 Fallo: mic2 detectado.\n👉 Revisa el flex del botón de encendido.`;
+    else if (texto.includes("prs0")) resultado = `🧪 Fallo: prs0 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("nand") || texto.includes("ans2")) resultado = `💾 Fallo: Problema con la memoria NAND.\n👉 El almacenamiento puede estar dañado o tener un fallo lógico.`;
+    else if (texto.includes("0x800")) resultado = `🔌 Fallo: 0x800 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x1000")) resultado = `👃 Fallo: 0x1000 detectado.\n👉 Revisa el flex del sensor de proximidad.`;
+    else if (texto.includes("0x1800")) resultado = `📦 Fallo: 0x1800 detectado.\n👉 Revisa tanto el flex del puerto de carga como el del sensor de proximidad.`;
+    else if (texto.includes("0x400")) resultado = `🧩 Fallo: 0x400 detectado.\n👉 Posible separación entre capas (sandwich separation).`;
+    else if (texto.includes("0x400000")) resultado = `📡 Fallo: 0x400000 detectado.\n👉 Revisa el flex de carga inalámbrica (vidrio trasero).`;
+    else if (texto.includes("0x100000")) resultado = `🔌 Fallo: 0x100000 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x500000")) resultado = `📳 Fallo: 0x500000 detectado.\n👉 Revisa el taptic engine, el puerto de carga o comunicación con la batería.`;
+    else if (texto.includes("0x200000")) resultado = `👃 Fallo: 0x200000 detectado.\n👉 Revisa el flex del sensor de proximidad o carga inalámbrica en modelos recientes.`;
+    else if (texto.includes("0xa1")) resultado = `🔋 Fallo: 0xa1 detectado.\n👉 Revisa la batería en modelos iPhone 15 Pro o Pro Max.`;
+    else if (texto.includes("0x300000")) resultado = `🔌 Fallo: 0x300000 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x700000")) resultado = `🔄 Fallo: 0x700000 detectado.\n👉 Revisa tanto el flex del puerto de carga como el de carga inalámbrica.`;
+
+    document.getElementById('resultado').innerText = resultado;
+  }
+});
+</script>
+</body>
+</html>
