@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Analizador Panic Full</title>
+  <title>Analizador de Panic MacPartsRepair</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
   <style>
     body {
@@ -62,17 +62,30 @@
   </style>
 </head>
 <body>
-  <h1>Analizador de Panic Full - iPhone</h1>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/60px-Apple_logo_black.svg.png" alt="Logo" style="vertical-align:middle;margin-right:10px;height:40px;">
+<span style="font-size:1.8em;font-weight:bold;vertical-align:middle;">Analizador de Panic MacPartsRepair</span>
   <p>Pega el texto del Panic Full abajo:</p>
   <textarea id="panicText" placeholder="Pega aquí el log del panic..."></textarea>
   <button id="btnAnalizar" onclick="analizarPanic()" disabled>Analizar</button>
   <button onclick="limpiar()">Limpiar</button>
   <div id="resultado"></div>
 <button onclick="copiarResultado()">📋 Copiar resultado</button>
-  <h2>O cargar archivo .ips</h2>
-  <h2>O subir una imagen del panic</h2>
-  <input type="file" accept="image/*" onchange="leerImagen(event)" />
-  <input type="file" id="archivoPanic" accept=".txt,.ips" onchange="leerArchivo(event)" />
+  <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+  <div>
+    <h2>Subir imagen del panic</h2>
+    <label style="display:inline-block;padding:10px 20px;background:#4CAF50;color:white;border-radius:8px;cursor:pointer;">
+📷 Subir imagen del panic
+<input type="file" accept="image/*" onchange="leerImagen(event)" style="display:none;" />
+</label>
+  </div>
+  <div>
+    <h2>Cargar archivo .ips</h2>
+    <label style="display:inline-block;padding:10px 20px;background:#2196F3;color:white;border-radius:8px;cursor:pointer;">
+📄 Cargar archivo .ips
+<input type="file" id="archivoPanic" accept=".txt,.ips" onchange="leerArchivo(event)" style="display:none;" />
+</label>
+  </div>
+</div>
   <p id="mensajeOCR" style="display:none;font-weight:bold;margin-top:1rem;">Reconociendo texto...</p>
 <div id="progresoOCR"><div></div></div>
   <script>
