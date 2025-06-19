@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Detector de Fallos Panic Full</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -74,92 +73,89 @@
   <div id="resultado"></div>
 
   <h2>O cargar archivo .ips</h2>
+  <h2>O subir una imagen del panic</h2>
+  <input type="file" accept="image/*" onchange="leerImagen(event)" />
   <input type="file" id="archivoPanic" accept=".txt,.ips" onchange="leerArchivo(event)" />
 
   <script>
-    function analizarPanic() {
-      const archivo = document.getElementById('archivoPanic').files[0];
-      if (archivo) {
-        const lector = new FileReader();
-        lector.onload = function(e) {
-          const contenido = e.target.result;
-          procesarTexto(contenido);
-        };
-        lector.readAsText(archivo);
-      } else {
-        const contenidoManual = document.getElementById('panicText').value;
-        procesarTexto(contenidoManual);
-      }
-    }
-
-    function procesarTexto(textoOriginal) {
-      const texto = textoOriginal.toLowerCase();
-      let resultado = "No se detectó una falla clara. Revisa que el panic esté completo.";
-
-      // [Tu lógica de análisis permanece aquí, ya agregada previamente...]
-
-      resultado += `
-
-📱 Modelos sugeridos: ${detectarModelo(texto)}
-🔧 Sugerencia técnica: ${sugerenciaPorModelo(texto)}`;
-      const tipo = clasificarFallo(texto);
-      const icono = tipo === "grafico" ? "📷" : tipo === "bateria" ? "🔋" : tipo === "proximidad" ? "📶" : "❓";
-      document.getElementById('resultado').innerHTML = `<div class='fallo ${tipo}'><strong>${icono} Diagnóstico</strong><br>${resultado.replace(/\n/g, '<br>')}</div>`;
-    }
-
-    function clasificarFallo(texto) {
-      if (texto.includes("nand") || texto.includes("ans2")) return "bateria";
-      if (texto.includes("mic") || texto.includes("prs") || texto.includes("i2c")) return "proximidad";
-      if (texto.includes("gpu") || texto.includes("camera") || texto.includes("iogpufamily")) return "grafico";
-      if (texto.includes("tg0b") || texto.includes("battery") || texto.includes("a1")) return "bateria";
-      return "";
-    }
-
-    function limpiar() {
-      document.getElementById('panicText').value = "";
-      const fileInput = document.getElementById('archivoPanic');
-      const nuevoInput = fileInput.cloneNode(true);
-      nuevoInput.id = "archivoPanic";
-      nuevoInput.setAttribute("onchange", "leerArchivo(event)");
-      fileInput.parentNode.replaceChild(nuevoInput, fileInput);
-      document.getElementById('resultado').innerHTML = "";
-      alert("Campos limpiados. Puedes comenzar un nuevo análisis.");
-    }
-
-    function leerArchivo(event) {
-      const archivo = event.target.files[0];
-      if (!archivo) return;
+window.addEventListener('DOMContentLoaded', function () {
+  window.analizarPanic = function() {
+    const archivo = document.getElementById('archivoPanic').files[0];
+    if (archivo) {
       const lector = new FileReader();
       lector.onload = function(e) {
         const contenido = e.target.result;
         procesarTexto(contenido);
       };
       lector.readAsText(archivo);
+    } else {
+      const contenidoManual = document.getElementById('panicText').value;
+      procesarTexto(contenidoManual);
     }
+  };
 
-    function detectarModelo(texto) {
-      if (texto.includes("iphone15,3") || texto.includes("iphone15pro")) return "iPhone 15 Pro / Pro Max";
-      if (texto.includes("iphone15") || texto.includes("iphone15,2")) return "iPhone 15 / 15 Plus";
-      if (texto.includes("iphone14pro") || texto.includes("iphone14,3")) return "iPhone 14 Pro / Pro Max";
-      if (texto.includes("iphone14") || texto.includes("iphone14,2")) return "iPhone 14 / 14 Plus";
-      if (texto.includes("iphone13")) return "iPhone 13 (todas las versiones)";
-      if (texto.includes("iphone12")) return "iPhone 12 (todas las versiones)";
-      if (texto.includes("iphone11")) return "iPhone 11 (todas las versiones)";
-      if (texto.includes("iphone10") || texto.includes("iphone x")) return "iPhone X / XS / XR";
-      if (texto.includes("iphone se")) return "iPhone SE (todas las generaciones)";
-      if (texto.includes("iphone9") || texto.includes("iphone8")) return "iPhone 7 / 8";
-      return "No identificado";
-    }
+  window.limpiar = function () {
+    document.getElementById('panicText').value = "";
+    const fileInput = document.getElementById('archivoPanic');
+    const nuevoInput = fileInput.cloneNode(true);
+    nuevoInput.id = "archivoPanic";
+    nuevoInput.setAttribute("onchange", "leerArchivo(event)");
+    fileInput.parentNode.replaceChild(nuevoInput, fileInput);
+    document.getElementById('resultado').innerHTML = "";
+    alert("Campos limpiados. Puedes comenzar un nuevo análisis.");
+  };
 
-    function sugerenciaPorModelo(texto) {
-      if (texto.includes("iphone15,3") || texto.includes("iphone15pro")) return "Verifica batería, puerto de carga y flex inalámbrico.";
-      if (texto.includes("iphone15") || texto.includes("iphone15,2")) return "Revisa sensor de proximidad y carga inalámbrica.";
-      if (texto.includes("iphone14pro") || texto.includes("iphone14,3")) return "Revisión del botón de encendido, proximidad y separación de capas.";
-      if (texto.includes("iphone14") || texto.includes("iphone14,2")) return "Evalúa carga inalámbrica, puerto de carga o Taptic Engine.";
-      if (texto.includes("iphone13")) return "Inspecciona flex de carga y flex de proximidad.";
-      if (texto.includes("iphone12") || texto.includes("iphone11") || texto.includes("iphone10") || texto.includes("iphone se")) return "Micrófonos, batería o NAND suelen fallar en estos modelos.";
-      return "Consulta conexiones físicas y sensores según el código encontrado.";
-    }
-  </script>
+  window.leerArchivo = function (event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = function(e) {
+      procesarTexto(e.target.result);
+    };
+    lector.readAsText(archivo);
+  };
+
+  window.leerImagen = function (event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = function(e) {
+      Tesseract.recognize(
+        e.target.result,
+        'eng',
+        { logger: m => console.log(m) }
+      ).then(({ data: { text } }) => {
+        alert("Texto reconocido automáticamente desde la imagen. Se iniciará el análisis.");
+        procesarTexto(text);
+      }).catch(err => {
+        alert("Error al procesar imagen con OCR: " + err);
+      });
+    };
+    lector.readAsDataURL(archivo);
+  };
+
+  function procesarTexto(textoOriginal) {
+    const texto = textoOriginal.toLowerCase();
+    let resultado = "No se detectó una falla clara. Revisa que el panic esté completo.";
+    if (texto.includes("mic1")) resultado = `🎤 Fallo: mic1 detectado.\n👉 Revisa el flex del puerto de carga. En iPhone SE 2020 también podría ser una falla de placa.`;
+    else if (texto.includes("mic2")) resultado = `🎤 Fallo: mic2 detectado.\n👉 Revisa el flex del botón de encendido.`;
+    else if (texto.includes("prs0")) resultado = `🧪 Fallo: prs0 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("nand") || texto.includes("ans2")) resultado = `💾 Fallo: Problema con la memoria NAND.\n👉 El almacenamiento puede estar dañado o tener un fallo lógico.`;
+    else if (texto.includes("0x800")) resultado = `🔌 Fallo: 0x800 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x1000")) resultado = `👃 Fallo: 0x1000 detectado.\n👉 Revisa el flex del sensor de proximidad.`;
+    else if (texto.includes("0x1800")) resultado = `📦 Fallo: 0x1800 detectado.\n👉 Revisa tanto el flex del puerto de carga como el del sensor de proximidad.`;
+    else if (texto.includes("0x400")) resultado = `🧩 Fallo: 0x400 detectado.\n👉 Posible separación entre capas (sandwich separation).`;
+    else if (texto.includes("0x400000")) resultado = `📡 Fallo: 0x400000 detectado.\n👉 Revisa el flex de carga inalámbrica (vidrio trasero).`;
+    else if (texto.includes("0x100000")) resultado = `🔌 Fallo: 0x100000 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x500000")) resultado = `📳 Fallo: 0x500000 detectado.\n👉 Revisa el taptic engine, el puerto de carga o comunicación con la batería.`;
+    else if (texto.includes("0x200000")) resultado = `👃 Fallo: 0x200000 detectado.\n👉 Revisa el flex del sensor de proximidad o carga inalámbrica en modelos recientes.`;
+    else if (texto.includes("0xa1")) resultado = `🔋 Fallo: 0xa1 detectado.\n👉 Revisa la batería en modelos iPhone 15 Pro o Pro Max.`;
+    else if (texto.includes("0x300000")) resultado = `🔌 Fallo: 0x300000 detectado.\n👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x700000")) resultado = `🔄 Fallo: 0x700000 detectado.\n👉 Revisa tanto el flex del puerto de carga como el de carga inalámbrica.`;
+
+    document.getElementById('resultado').innerText = resultado;
+  }
+});
+</script>
 </body>
 </html>
