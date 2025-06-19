@@ -43,24 +43,6 @@
       border-radius: 8px;
       white-space: pre-wrap;
     }
-    .fallo {
-      padding: 0.5rem;
-      border-left: 5px solid #ff4d4d;
-      background-color: #ffeaea;
-      margin-bottom: 1rem;
-    }
-    .fallo.grafico {
-      border-color: #0070f3;
-      background-color: #e8f0ff;
-    }
-    .fallo.bateria {
-      border-color: #ffa500;
-      background-color: #fff3e6;
-    }
-    .fallo.proximidad {
-      border-color: #2e8b57;
-      background-color: #e6fff1;
-    }
   </style>
 </head>
 <body>
@@ -120,16 +102,27 @@ window.addEventListener('DOMContentLoaded', function () {
     if (!archivo) return;
     const lector = new FileReader();
     lector.onload = function(e) {
-      Tesseract.recognize(
-        e.target.result,
-        'eng',
-        { logger: m => console.log(m) }
-      ).then(({ data: { text } }) => {
-        alert("Texto reconocido automáticamente desde la imagen. Se iniciará el análisis.");
-        procesarTexto(text);
-      }).catch(err => {
-        alert("Error al procesar imagen con OCR: " + err);
-      });
+      const img = new Image();
+      img.onload = function () {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width * 2;
+        canvas.height = img.height * 2;
+        ctx.filter = 'contrast(150%) grayscale(0%)';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        Tesseract.recognize(
+          canvas,
+          'eng+spa',
+          { logger: m => console.log(m) }
+        ).then(({ data: { text } }) => {
+          alert("Texto reconocido automáticamente desde la imagen.");
+          document.getElementById('panicText').value = text;
+          alert("Texto reconocido. Puedes revisarlo o modificarlo antes de analizar.");
+        }).catch(err => {
+          alert("Error al procesar imagen con OCR: " + err);
+        });
+      };
+      img.src = e.target.result;
     };
     lector.readAsDataURL(archivo);
   };
@@ -137,25 +130,40 @@ window.addEventListener('DOMContentLoaded', function () {
   function procesarTexto(textoOriginal) {
     const texto = textoOriginal.toLowerCase();
     let resultado = "No se detectó una falla clara. Revisa que el panic esté completo.";
-    if (texto.includes("mic1")) resultado = `🎤 Fallo: mic1 detectado.\n👉 Revisa el flex del puerto de carga. En iPhone SE 2020 también podría ser una falla de placa.`;
-    else if (texto.includes("mic2")) resultado = `🎤 Fallo: mic2 detectado.\n👉 Revisa el flex del botón de encendido.`;
-    else if (texto.includes("prs0")) resultado = `🧪 Fallo: prs0 detectado.\n👉 Revisa el flex del puerto de carga.`;
-    else if (texto.includes("nand") || texto.includes("ans2")) resultado = `💾 Fallo: Problema con la memoria NAND.\n👉 El almacenamiento puede estar dañado o tener un fallo lógico.`;
-    else if (texto.includes("0x800")) resultado = `🔌 Fallo: 0x800 detectado.\n👉 Revisa el flex del puerto de carga.`;
-    else if (texto.includes("0x1000")) resultado = `👃 Fallo: 0x1000 detectado.\n👉 Revisa el flex del sensor de proximidad.`;
-    else if (texto.includes("0x1800")) resultado = `📦 Fallo: 0x1800 detectado.\n👉 Revisa tanto el flex del puerto de carga como el del sensor de proximidad.`;
-    else if (texto.includes("0x400")) resultado = `🧩 Fallo: 0x400 detectado.\n👉 Posible separación entre capas (sandwich separation).`;
-    else if (texto.includes("0x400000")) resultado = `📡 Fallo: 0x400000 detectado.\n👉 Revisa el flex de carga inalámbrica (vidrio trasero).`;
-    else if (texto.includes("0x100000")) resultado = `🔌 Fallo: 0x100000 detectado.\n👉 Revisa el flex del puerto de carga.`;
-    else if (texto.includes("0x500000")) resultado = `📳 Fallo: 0x500000 detectado.\n👉 Revisa el taptic engine, el puerto de carga o comunicación con la batería.`;
-    else if (texto.includes("0x200000")) resultado = `👃 Fallo: 0x200000 detectado.\n👉 Revisa el flex del sensor de proximidad o carga inalámbrica en modelos recientes.`;
-    else if (texto.includes("0xa1")) resultado = `🔋 Fallo: 0xa1 detectado.\n👉 Revisa la batería en modelos iPhone 15 Pro o Pro Max.`;
-    else if (texto.includes("0x300000")) resultado = `🔌 Fallo: 0x300000 detectado.\n👉 Revisa el flex del puerto de carga.`;
-    else if (texto.includes("0x700000")) resultado = `🔄 Fallo: 0x700000 detectado.\n👉 Revisa tanto el flex del puerto de carga como el de carga inalámbrica.`;
+    if (texto.includes("mic1")) resultado = `🎤 Fallo: mic1 detectado.
+👉 Revisa el flex del puerto de carga. En iPhone SE 2020 también podría ser una falla de placa.`;
+    else if (texto.includes("mic2")) resultado = `🎤 Fallo: mic2 detectado.
+👉 Revisa el flex del botón de encendido.`;
+    else if (texto.includes("prs0")) resultado = `🧪 Fallo: prs0 detectado.
+👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("nand") || texto.includes("ans2")) resultado = `💾 Fallo: Problema con la memoria NAND.
+👉 El almacenamiento puede estar dañado o tener un fallo lógico.`;
+    else if (texto.includes("0x800")) resultado = `🔌 Fallo: 0x800 detectado.
+👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x1000")) resultado = `👃 Fallo: 0x1000 detectado.
+👉 Revisa el flex del sensor de proximidad.`;
+    else if (texto.includes("0x1800")) resultado = `📦 Fallo: 0x1800 detectado.
+👉 Revisa tanto el flex del puerto de carga como el del sensor de proximidad.`;
+    else if (texto.includes("0x400")) resultado = `🧩 Fallo: 0x400 detectado.
+👉 Posible separación entre capas (sandwich separation).`;
+    else if (texto.includes("0x400000")) resultado = `📡 Fallo: 0x400000 detectado.
+👉 Revisa el flex de carga inalámbrica (vidrio trasero).`;
+    else if (texto.includes("0x100000")) resultado = `🔌 Fallo: 0x100000 detectado.
+👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x500000")) resultado = `📳 Fallo: 0x500000 detectado.
+👉 Revisa el taptic engine, el puerto de carga o comunicación con la batería.`;
+    else if (texto.includes("0x200000")) resultado = `👃 Fallo: 0x200000 detectado.
+👉 Revisa el flex del sensor de proximidad o carga inalámbrica en modelos recientes.`;
+    else if (texto.includes("0xa1")) resultado = `🔋 Fallo: 0xa1 detectado.
+👉 Revisa la batería en modelos iPhone 15 Pro o Pro Max.`;
+    else if (texto.includes("0x300000")) resultado = `🔌 Fallo: 0x300000 detectado.
+👉 Revisa el flex del puerto de carga.`;
+    else if (texto.includes("0x700000")) resultado = `🔄 Fallo: 0x700000 detectado.
+👉 Revisa tanto el flex del puerto de carga como el de carga inalámbrica.`;
 
     document.getElementById('resultado').innerText = resultado;
   }
 });
-</script>
+  </script>
 </body>
 </html>
