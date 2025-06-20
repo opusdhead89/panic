@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Analizador de Panic MacPartsRepair</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -120,6 +120,7 @@
       else if (texto.includes("nand") || texto.includes("ans2")) resultado += `💾 Fallo: Problema con la memoria NAND.\n👉 El almacenamiento puede estar dañado o tener un fallo lógico.`;
       else if (texto.includes("tgob") || texto.includes("tg0b")) resultado += `🌡️ Fallo: TGOB no detectado.\n👉 Revisa la batería o el sensor de temperatura (termistor). Puede ser una batería genérica, el conector suelto o daño en la línea de comunicación.`;
       else if (texto.includes("thermalmonitord") || texto.includes("watchdog timeout")) resultado += `🧭 Fallo: Watchdog o Thermalmonitord.\n👉 El sistema no recibe respuesta del monitoreo térmico. Puede ser batería en mal estado o falla de línea de control en circuito de carga.`;
+      else if (texto.includes("smc panic") || texto.includes("bsc failure")) resultado += `🚨 Fallo: SMC PANIC detectado.\n👉 Verifica la batería y los sensores de temperatura.\n🔧 Revisa las líneas de comunicación del SMC (System Management Controller).\n⚡ Puede ser necesario reemplazar o reballing del circuito PMIC/SMC.`;
       else resultado += "⚠️ No se detectó una falla clara. Revisa que el panic esté completo.";
       document.getElementById('resultado').innerText = resultado;
     }
@@ -150,12 +151,8 @@
       }).then(({ data: { text } }) => {
         document.getElementById("mensajeOCR").style.display = "none";
         document.getElementById("progresoOCR").style.display = "none";
-        if (text.trim().length < 5) {
-          alert("No se pudo reconocer texto válido en la imagen. Intenta con otra imagen o mejora la calidad.");
-        } else {
-          document.getElementById("panicText").value = text;
-          document.getElementById("btnAnalizar").disabled = false;
-        }
+        document.getElementById("panicText").value = text;
+        document.getElementById("btnAnalizar").disabled = false;
       });
     }
   </script>
